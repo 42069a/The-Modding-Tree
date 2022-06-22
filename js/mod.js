@@ -13,13 +13,13 @@ let modInfo = {
 
 // Set your version in num and name
 let VERSION = {
-	num: "0.0.2",
-	name: "",
+	num: "0.0.3",
+	name: "more beta",
 }
 
 let changelog = `
 <h1>Changelog:</h1><br>
-	<h2>Endgame: 1 beta point</h2><br>
+	<h2>Endgame: 50 total beta points</h2><br>
 	<h3>v0.0.1</h3><br>
 		- Added alpha layer.<br>
 		- Added 5 upgrades.<br>
@@ -27,6 +27,10 @@ let changelog = `
 		- Added beta layer.<br>
 		- Added 3 upgrades.<br>
 		- Added 2 buyables.<br>
+	<h3>v0.0.3</h3><br>
+		- Added 3 milestones.<br>
+		- Added 2 upgrades.<br>
+		- Added 1 buyable.<br>
 `
 
 let winText = `Congratulations! You have reached the end and beaten this game, but for now...`
@@ -66,7 +70,7 @@ var displayThings = [
 
 // Determines when the game "ends"
 function isEndgame() {
-	return player.b.points.gte(1)
+	return player.b.total.gte(50)
 }
 
 

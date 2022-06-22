@@ -1,5 +1,5 @@
 let modInfo = {
-	name: "The Tree of something",
+	name: "The Tree of boosts",
 	id: "42069",
 	author: "42069",
 	pointsName: "points",
@@ -7,20 +7,27 @@ let modInfo = {
 
 	discordName: "",
 	discordLink: "",
-	initialStartPoints: new Decimal (10), // Used for hard resets and new players
+	initialStartPoints: new Decimal(0), // Used for hard resets and new players
 	offlineLimit: 1,  // In hours
 }
 
 // Set your version in num and name
 let VERSION = {
-	num: "0.0.1",
-	name: "Start",
+	num: "0.0.2",
+	name: "",
 }
 
-let changelog = `<h1>Changelog:</h1><br>
+let changelog = `
+<h1>Changelog:</h1><br>
+	<h2>Endgame: 1 beta point</h2><br>
 	<h3>v0.0.1</h3><br>
 		- Added alpha layer.<br>
-		- Added 5 upgrades.<br>`
+		- Added 5 upgrades.<br>
+	<h3>v0.0.2</h3><br>
+		- Added beta layer.<br>
+		- Added 3 upgrades.<br>
+		- Added 2 buyables.<br>
+`
 
 let winText = `Congratulations! You have reached the end and beaten this game, but for now...`
 
@@ -44,6 +51,8 @@ function getPointGen() {
 	
 	let gain = new Decimal(1)
 	if (hasUpgrade("a",11))	gain = gain.mul(upgradeEffect("a", 11))
+	gain = gain.mul(buyableEffect("a",11))
+	if (player.b.unlocked) gain = gain.mul(tmp.b.effect.pointeff)
 	return gain
 }
 
@@ -57,7 +66,7 @@ var displayThings = [
 
 // Determines when the game "ends"
 function isEndgame() {
-	return player.points.gte(new Decimal("e280000000"))
+	return player.b.points.gte(1)
 }
 
 

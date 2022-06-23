@@ -3,7 +3,7 @@ let modInfo = {
 	id: "42069",
 	author: "42069",
 	pointsName: "points",
-	modFiles: ["layers.js", "tree.js"],
+	modFiles: ["layers.js", "tree.js", "math_support.js"],
 
 	discordName: "",
 	discordLink: "",
@@ -13,13 +13,13 @@ let modInfo = {
 
 // Set your version in num and name
 let VERSION = {
-	num: "0.0.3",
-	name: "more beta",
+	num: "0.0.4",
+	name: "beta challenges",
 }
 
 let changelog = `
 <h1>Changelog:</h1><br>
-	<h2>Endgame: 50 total beta points</h2><br>
+	<h2>Endgame: 1e13 total beta points</h2><br>
 	<h3>v0.0.1</h3><br>
 		- Added alpha layer.<br>
 		- Added 5 upgrades.<br>
@@ -31,6 +31,10 @@ let changelog = `
 		- Added 3 milestones.<br>
 		- Added 2 upgrades.<br>
 		- Added 1 buyable.<br>
+	<h3>v0.0.4</h3><br>
+		- Added 3 milestones.<br>
+		- Added 12 upgrades.<br>
+		- Added 3 challenges.<br>
 `
 
 let winText = `Congratulations! You have reached the end and beaten this game, but for now...`
@@ -54,9 +58,12 @@ function getPointGen() {
 		return new Decimal(0)
 	
 	let gain = new Decimal(1)
-	if (hasUpgrade("a",11))	gain = gain.mul(upgradeEffect("a", 11))
-	gain = gain.mul(buyableEffect("a",11))
+	if (hasUpgrade("a", 11)) gain = gain.mul(upgradeEffect("a", 11))
+	gain = gain.mul(buyableEffect("a", 11))
 	if (player.b.unlocked) gain = gain.mul(tmp.b.effect.pointeff)
+	if (inChallenge("b", 11)) gain = gain.pow(0.5)
+	if (inChallenge("b", 12)) gain = gain.pow(0.5)
+	if (inChallenge("b", 13)) gain = gain.pow(0.5)
 	return gain
 }
 
@@ -70,7 +77,7 @@ var displayThings = [
 
 // Determines when the game "ends"
 function isEndgame() {
-	return player.b.total.gte(50)
+	return player.b.total.gte(new Decimal("1e13"))
 }
 
 

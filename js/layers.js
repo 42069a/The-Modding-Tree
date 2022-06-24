@@ -1,52 +1,3 @@
-// Layer Template
-/*/
-addLayer("x", {
-    name: "x", // This is optional, only used in a few places, If absent it just uses the layer id.
-    symbol: "x", // This appears on the layer's node. Default is the id with the first letter capitalized
-    position: 0, // Horizontal position within a row. By default it uses the layer id and sorts in alphabetical order
-    startData() { return {
-        total: new Decimal(0),
-        best: new Decimal(0),
-        points: new Decimal(0),
-        time: 0,
-        unlocked: false
-    }},
-    color: "#FF3F3F",
-    requires: new Decimal(1), // Can be a function that takes requirement increases into account
-    resource: "x", // Name of prestige currency
-    baseResource: "x", // Name of resource prestige is based on
-    baseAmount() {return player.points}, // Get the current amount of baseResource
-    type: "normal", // normal: cost to gain currency depends on amount gained. static: cost depends on how much you already have
-    exponent: 1, // Prestige currency exponent
-    gainMult() { // Calculate the multiplier for main currency from bonuses
-        // base
-        mult = new Decimal(1)
-        return mult
-    },
-    gainExp() { // Calculate the exponent on main currency from bonuses
-        return new Decimal(1)
-    },
-    row: 0, // Row the layer is in on the tree (0 is the first row)
-    layerShown() {return true},
-    doReset(layer) {
-        if (layer == this.layer) {
-            player[this.layer].total = player[this.layer].total.add(tmp.onResetGain)
-            player[this.layer].best = player[this.layer].best.max(player[this.layer].points.add(tmp.onResetGain))
-        }
-    },    
-    onResetGain() {
-        let base = tmp[this.layer].baseAmount.div(tmp[this.layer].requires).pow(tmp[this.layer].exponent)
-
-        ret = base
-        ret = ret.pow(tmp[this.layer].gainExp)
-        ret = ret.mul(tmp[this.layer].gainMult)
-        return ret
-    },
-    update(delta) {
-        player[this.layer] += delta
-    },
-)
-/*/
 addLayer("a", {
     name: "alpha points", // This is optional, only used in a few places, If absent it just uses the layer id.
     symbol: "α", // This appears on the layer's node. Default is the id with the first letter capitalized
@@ -67,62 +18,54 @@ addLayer("a", {
     resetTime: 0,
     gainMult() { // Calculate the multiplier for main currency from bonuses
         // base
-        mult = new Decimal(1)
+        let mult = new Decimal(1)
 
         // alpha layer
         if (hasUpgrade("a", 21)) mult = mult.mul(upgradeEffect("a", 21))
 
         // beta layer
-        mult = mult.mul(tmp.b.effect.alphaeff)
+        if (player.b.unlocked) mult = mult.mul(tmp.b.effect.alphaeff)
+        
+        // gamma layer
+        if (player.g.unlocked) mult = mult.mul(tmp.g.effect.othereff)
         return mult
     },
     gainExp() { // Calculate the exponent on main currency from bonuses
         return new Decimal(1)
     },
     row: 0, // Row the layer is in on the tree (0 is the first row)
-    layerShown() {return true},
+    layerShown() {return true || player[this.layer].unlocked},
     doReset(layer) {
         if (layer == this.layer) {
-            player[this.layer].total = player[this.layer].total.add(tmp.onResetGain)
-            player[this.layer].best = player[this.layer].best.max(player[this.layer].points.add(tmp.onResetGain))
-        }
-        if (layer == "b") {
-            keep = []
-            keep.push(33) 
-            if (hasMilestone("b", 0)) keep.push(11, 12, 13)
-            if (hasMilestone("b", 1)) keep.push(21, 22, 23)
-            if (hasMilestone("b", 3)) keep.push(31, 32)
-            if (hasMilestone("b", 5)) keep.push(14, 24)
-            layerDataReset("a")
-            player[this.layer].upgrades = keep
+            // points
+            player.points = new Decimal(0)
         }
     },    
-    onResetGain() {
+    getResetGain() {
         let base = tmp[this.layer].baseAmount.div(tmp[this.layer].requires).pow(tmp[this.layer].exponent)
 
-        ret = base
+        let ret = base
         ret = ret.pow(tmp[this.layer].gainExp)
         ret = ret.mul(tmp[this.layer].gainMult)
         return ret
     },
-    update(delta) {
-        // auto gain
-        if (hasMilestone("b", 2)) {
-            let baseGain = tmp.a.onResetGain
-            let gain = baseGain.mul(0.01)
-            gain = gain.mul(delta)
-            let pow = hasMilestone("b", 4) ? 2 : 1
-            gain = gain.mul(player.b.milestones.length ** pow)
-            gain = gain.mul(hasMilestone("b", 5) ? 2.778 : 1)
-            player.a.points = player.a.points.add(gain)
-        }
-
+    automate(delta) {
         // auto buyables
-        to_buy = []
+        let to_buy = []
         if (hasMilestone("b", 4)) to_buy.push(11, 12, 13)
         for(let i = 0; i < to_buy.length; i++) {
             if (tmp.a.buyables[to_buy[i]].canAfford && getBuyableAmount("a", to_buy[i]).lt(tmp.a.buyables[to_buy[i]].purchaseLimit)) setBuyableAmount("a", to_buy[i], getBuyableAmount("a", to_buy[i]).add(1))
         }
+    },
+    passiveGeneration(){
+        let gain = 0
+        if (hasMilestone("b", 2)) {
+            gain = 0.01
+            let pow = hasMilestone("b", 4) ? 2 : 1
+            gain = gain * player.b.milestones.length ** pow
+            gain = gain * hasMilestone("b", 5) ? 2.778 : 1
+        }
+        return gain
     },
     upgrades: {
         11: {
@@ -270,6 +213,13 @@ addLayer("a", {
             description: "Unlock another layer",
             unlocked() {return getBuyableAmount("a", 12).gte(2) || hasUpgrade(this.layer, this.id)},
             onPurchase() {player.b.unlocked = true}
+        },
+        34: {
+            title: "Alpha-34",
+            cost: new Decimal("1e40"),
+            description: "Unlock another layer",
+            unlocked() {return hasUpgrade("a", 24) || hasUpgrade(this.layer, this.id)},
+            onPurchase() {player.b.unlocked = true}
         }
     },
     buyables:{
@@ -403,6 +353,8 @@ addLayer("a", {
                 "main-display",
                 ["prestige-button","",true],
                 "blank",
+                ["display-text", function(){return "You have " + format(tmp[this.layer].baseAmount) + " " + tmp[this.layer].baseResource}],
+                "blank",
                 "buyables",
                 "blank",
                 "upgrades"
@@ -423,6 +375,7 @@ addLayer("b", {
         total: new Decimal(0),
         best: new Decimal(0),
         points: new Decimal(0),
+        resetTime: new Decimal(0),
         unlocked: false
     }},
     color: "#3F3FFF",
@@ -432,29 +385,62 @@ addLayer("b", {
     baseAmount() {return player.a.points}, // Get the current amount of baseResource
     type: "normal", // normal: cost to gain currency depends on amount gained. static: cost depends on how much you already have
     exponent: 0.3, // Prestige currency exponent
-    resetTime: 0,
     gainMult() { // Calculate the multiplier for main currency from bonuses
-        mult = new Decimal(1)
+        let mult = new Decimal(1)
+
+        // gamma layer
+        if (player.g.unlocked) mult = mult.mul(tmp.g.effect.othereff)
+
         return mult
     },
     gainExp() { // Calculate the exponent on main currency from bonuses
         return new Decimal(1)
     },
-    onResetGain() {
+    getResetGain() {
         let base = tmp[this.layer].baseAmount.div(tmp[this.layer].requires).pow(tmp[this.layer].exponent)
 
-        ret = base
+        let ret = base
         ret = ret.pow(tmp[this.layer].gainExp)
         ret = ret.mul(tmp[this.layer].gainMult)
         return ret
     },
     row: 1, // Row the layer is in on the tree (0 is the first row)
     branches: ["a"],
-    layerShown() {return player.b.unlocked},
+    layerShown() {return hasUpgrade("a", 33) || player.b.unlocked},
     doReset(layer) {
-        if (layer == this.layer) {
-            player[this.layer].total = player[this.layer].total.add(tmp.onResetGain)
-            player[this.layer].best = player[this.layer].best.max(player[this.layer].points.add(tmp.onResetGain))
+        if (layer == this.layer){
+            // alpha layer
+            // milestones
+            let keep_a_m = []
+
+            // upgrades
+            let keep_a_u = []
+            if (hasUpgrade("a", 33)) keep_a_u.push(33) 
+            if (hasUpgrade("a", 34)) keep_a_u.push(34) 
+            if (hasMilestone("b", 0)) keep_a_u.push(11, 12, 13)
+            if (hasMilestone("b", 1)) keep_a_u.push(21, 22, 23)
+            if (hasMilestone("b", 3)) keep_a_u.push(31, 32)
+            if (hasMilestone("b", 5)) keep_a_u.push(14, 24)
+            
+            // reset
+            layerDataReset("a")
+            player.a.milestones = keep_a_m
+            player.a.upgrades = keep_a_u
+
+            // points
+            player.points = new Decimal(0)
+        }
+    },
+    passiveGeneration(){
+        let gain = 0
+        return gain
+    },
+    automate(delta) {
+        // auto buyables
+        let to_buy = []
+        
+        for (let i = 0; i < to_buy.length; i++) {
+            if (tmp.a.buyables[to_buy[i]].canAfford && getBuyableAmount("a", to_buy[i]).lt(tmp.a.buyables[to_buy[i]].purchaseLimit)) setBuyableAmount("a", to_buy[i], getBuyableAmount("a", to_buy[i]).add(1))
         }
     },
     effect() {
@@ -466,17 +452,17 @@ addLayer("b", {
 
         pointeff = pointeff.pow(poeffexp)
 
-        let alphaeff = player.b.best.add(1).log(10).add(1)
+        let othereff = player.b.best.add(1).log(10).add(1)
 
-        let aleffexp = new Decimal(2)
-        if (hasUpgrade("b", 11)) aleffexp = aleffexp.add(1)
-        if (maxedChallenge("b", 13)) aleffexp = aleffexp.add(2)
+        let otherexp = new Decimal(2)
+        if (hasUpgrade("b", 11)) otherexp = otherexp.add(1)
+        if (maxedChallenge("b", 13)) alphaexp = otherexp.add(2)
         
-        alphaeff = alphaeff.pow(aleffexp)
+        othereff = othereff.pow(otherexp)
 
         return {
             pointeff: pointeff,
-            alphaeff: alphaeff
+            alphaeff: othereff
         }
     },
     effectDescription() {
@@ -509,12 +495,12 @@ addLayer("b", {
         },
         4: {
             requirementDescription: "1000 total beta points",
-            effectDescription: "Autobuys the first 3 alpha buyables automagically for free<br>and boosts Milestone 3 to per beta milestone<sup>2</sup>",
+            effectDescription: "Autobuys the first 3 alpha buyables automagically for free<br>and boost beta milestone 3 to per beta milestone<sup>2</sup>",
             done() { return player.b.total.gte(1000) }
         },
         5: {
             requirementDescription: "1e13 total beta points",
-            effectDescription: "Keep Alpha-14 and Alpha-24 on beta reset<br> and multiply Milestone 3 effect by 2.778",
+            effectDescription: "Gives Alpha-14 and Alpha-24 on reset<br> and boost beta milestone 3 effect by x2.778",
             done() { return player.b.total.gte(new Decimal("1e13")) }
         },
     },    
@@ -607,19 +593,19 @@ addLayer("b", {
         41: {
             title: "Beta-41",
             cost: new Decimal(10000),
-            description: "Unlock a challange",
+            description: "Unlock a challenge",
             unlocked() {return hasUpgrade("b", 33) && player.b.total.gt(7500) || hasUpgrade(this.layer, this.id)}
         },
         42: {
             title: "Beta-42",
             cost: new Decimal(100000),
-            description: "Unlock another challange",
+            description: "Unlock another challenge",
             unlocked() {return maxedChallenge("b", 11) || hasUpgrade(this.layer, this.id)}
         },
         43: {
             title: "Beta-43",
             cost: new Decimal(1000000),
-            description: "Unlock another challange",
+            description: "Unlock another challenge",
             unlocked() {return maxedChallenge("b", 12) || hasUpgrade(this.layer, this.id)}
         },
     },
@@ -644,7 +630,7 @@ addLayer("b", {
             name: "Beta-ch13",
             challengeDescription: "Beta-ch12 but Alpha-b12's purchase limit is 1",
             goalDescription: "2.5e5 points",
-            rewardDescription: "*2 to Alpha-b12's purchase limit and +2 to both beta effect exponents",
+            rewardDescription: "x2 to Alpha-b12's purchase limit and +2 to both beta effect exponents",
             canComplete() {return player.points.gte(new Decimal("2.5e5"))},
             unlocked() {return hasUpgrade("b", 43)}
         },
@@ -654,6 +640,8 @@ addLayer("b", {
             content: [
                 "main-display",
                 ["prestige-button","",true],
+                "blank",
+                ["display-text", function(){return "You have " + format(tmp[this.layer].baseAmount) + " " + tmp[this.layer].baseResource}],
                 "blank",
                 "upgrades"
             ],
@@ -681,51 +669,273 @@ addLayer("b", {
         {key: "b", description: "B: Reset for beta points", onPress() {if (canReset(this.layer)) doReset(this.layer)}, unlocked() {return player.b.unlocked}},
     ]
 })
-/*/
-addLayer("r", {
-    name: "radioactivity", // This is optional, only used in a few places, If absent it just uses the layer id.
-    symbol: "r", // This appears on the layer's node. Default is the id with the first letter capitalized
+
+addLayer("g", {
+    name: "gamma points", // This is optional, only used in a few places, If absent it just uses the layer id.
+    symbol: "γ", // This appears on the layer's node. Default is the id with the first letter capitalized
     position: 0, // Horizontal position within a row. By default it uses the layer id and sorts in alphabetical order
     startData() { return {
         total: new Decimal(0),
         best: new Decimal(0),
         points: new Decimal(0),
-        time: 0,
-        unlocked: false
+        resetTime: 0,
+        unlocked: false,
+        radioactivity: {
+            points: new Decimal(0),
+            sample_hp: new Decimal(0)
+        },
     }},
     color: "#FF3F3F",
-    requires: new Decimal(1), // Can be a function that takes requirement increases into account
-    resource: "alpha particles", // Name of prestige currency
-    baseResource: "x", // Name of resource prestige is based on
-    baseAmount() {return player.points}, // Get the current amount of baseResource
-    type: "static", // normal: cost to gain currency depends on amount gained. static: cost depends on how much you already have
-    exponent: 1, // Prestige currency exponent
+    requires: new Decimal("1e13"), // Can be a function that takes requirement increases into account
+    resource: "gamma points", // Name of prestige currency
+    baseResource: "beta points", // Name of resource prestige is based on
+    baseAmount() {return player.b.points}, // Get the current amount of baseResource
+    type: "normal", // normal: cost to gain currency depends on amount gained. static: cost depends on how much you already have
+    exponent: 0.1, // Prestige currency exponent
+    branches: ["b"],
     gainMult() { // Calculate the multiplier for main currency from bonuses
         // base
         mult = new Decimal(1)
+
         return mult
     },
     gainExp() { // Calculate the exponent on main currency from bonuses
         return new Decimal(1)
     },
-    row: "side", // Row the layer is in on the tree (0 is the first row)
-    layerShown() {return true},
-    doReset(layer) {
-        if (layer == this.layer) {
-            player[this.layer].total = player[this.layer].total.add(tmp.onResetGain)
-            player[this.layer].best = player[this.layer].best.max(player[this.layer].points.add(tmp.onResetGain))
-        }
-    },    
-    onResetGain() {
+    getResetGain() {
         let base = tmp[this.layer].baseAmount.div(tmp[this.layer].requires).pow(tmp[this.layer].exponent)
 
-        ret = base
+        let ret = base
         ret = ret.pow(tmp[this.layer].gainExp)
         ret = ret.mul(tmp[this.layer].gainMult)
         return ret
     },
-    update(delta) {
-        player[this.layer] += delta
+    row: 2, // Row the layer is in on the tree (0 is the first row)
+    layerShown() {return hasUpgrade("a", 34) || player[this.layer].unlocked},
+    doReset(layer) {
+        if (layer == this.layer){
+            // beta layer
+            // milestones
+            let keep_b_m = []
+            if (hasMilestone("g", 0)) keep_b_m.push(0, 1, 3)
+            if (hasMilestone("g", 1)) keep_b_m.push(2)
+
+            // upgrades
+            let keep_b_u = []
+            if (hasMilestone("g", 2)) keep_b_u.push(11, 12, 13, 21, 22, 23, 31, 32, 33)
+            
+            // reset
+            layerDataReset("b")
+            player.b.milestones = keep_b_m
+            player.b.upgrades = keep_b_u
+
+            // alpha layer
+            // milestones
+            let keep_a_m = []
+
+            // upgrades
+            let keep_a_u = []
+            keep_a_u.push(33, 34)
+            if (hasMilestone("g", 0)) keep_a_u.push(11, 12, 13, 21, 22, 23, 31, 32)
+            
+            // reset
+            layerDataReset("a")
+            player.a.milestones = keep_a_m
+            player.a.upgrades = keep_a_u
+
+            // points
+            player.points = new Decimal(0)
+        }
+    },    
+    automate() {
+        // auto buyables
+        let to_buy = []
+        for (let i = 0; i < to_buy.length; i++) {
+            if (tmp.a.buyables[to_buy[i]].canAfford && getBuyableAmount("a", to_buy[i]).lt(tmp.a.buyables[to_buy[i]].purchaseLimit)) setBuyableAmount("a", to_buy[i], getBuyableAmount("a", to_buy[i]).add(1))
+        }
     },
-)
-/*/
+    update(delta) {
+        if (hasUpgrade("g", 11)) {
+            let div = new Decimal(2)
+            div = div.pow(new Decimal(2).ln().div(tmp.g.sampleHalfLife).mul(delta))
+            player.g.radioactivity.sample_hp = player.g.radioactivity.sample_hp.div(div)
+        }
+    },
+    passiveGeneration(){
+        let gain = 0
+        return gain
+    },
+    effect() {
+        let pointeff = player.g.best.add(1).log(10).add(1)        
+        let poeffexp = new Decimal(10)
+        pointeff = pointeff.pow(poeffexp)
+
+        let othereff = player.g.best.add(1).log(10).add(1)
+        let otherexp = new Decimal(4)      
+        othereff = othereff.pow(otherexp)
+
+        let decayeff = player.g.radioactivity.points.add(1).log(10).add(1).log(10).div(5).add(1)
+        return {
+            pointeff: pointeff,
+            othereff: othereff,
+            decayeff: decayeff,
+        }
+    },
+    effectDescription() {
+        ret = ""
+        ret += "which are multiplying point gain by " + format(tmp.g.effect.pointeff)
+        ret += " and alpha and beta point gain by " + format(tmp.g.effect.othereff)
+        ret += "."
+        return ret
+    },
+    sampleHalfLife(){
+        let ret = new Decimal(10)
+        if (hasUpgrade("g", 21)) ret = ret.div(upgradeEffect("g", 21))
+        return ret
+    },
+    decayGainMult(){
+        let ret = new Decimal(1)
+        return ret
+    },
+    milestones: {
+        0: {
+            requirementDescription: "1 total gamma points",
+            effectDescription: "Gives the first 8 alpha upgrades and beta milestone 1, 2, 4 on reset",
+            done() { return player.g.total.gte(1) }
+        },
+        1: {
+            requirementDescription: "2 total gamma points",
+            effectDescription: "Gives beta milestone 3 on reset",
+            done() { return player.g.total.gte(2) }
+        },
+        2: {
+            requirementDescription: "4 total gamma points",
+            effectDescription: "Gives the first 9 beta upgrades on reset",
+            done() { return player.g.total.gte(4) }
+        },
+    },
+    upgrades:{
+        11: {
+            title: "Gamma-11",
+            cost: new Decimal(1),
+            description: "Unlock a new tab",
+            unlocked() {return player.g.total.gte(3) || hasUpgrade(this.layer, this.id)}
+        },
+        21: {
+            title: "Decay-11",
+            price: new Decimal(3),
+            currencyDisplayName: "Decay points",
+            canAfford() { return player.g.radioactivity.points.gt(this.price)},
+            pay() {
+                player.g.radioactivity.points = player.g.radioactivity.points.sub(this.price)
+            },
+            description: "Unlock alpha decay",
+            fullDisplay(){
+                let ret = "<span><span><h3>"
+                ret += this.title
+                ret += "</h3><br></span><span>"
+                ret += this.description
+                ret += "</span><br><br>"
+                ret += "Cost: 3 Decay points"
+                ret += "</span>"
+                return ret
+            },
+            effect() {
+                let ret = new Decimal(1)
+                
+                ret = ret.mul(player.a.points.div(new Decimal("1e40")).add(1).log(10).div(10).pow(0.5).add(1))
+                if (ret.gt(5)) ret = ret.pow(0.5).mul(10).sub(5)
+
+                return ret
+            },
+            unlocked() {return player.g.radioactivity.points.gte(1)}
+        }
+    },
+    buyables: {
+        11: {
+            cost(x) {return new Decimal(4)},
+            title() {return "Sample"},
+            display() {
+                let ret = ""
+                ret += "<br>"
+                ret += "Current atom count: " + format(player.g.radioactivity.sample_hp.floor()) + "/" + format(tmp.g.buyables[11].cost)
+                ret += "<br> ETA to finish: " + formatTime(player.g.radioactivity.sample_hp.log(2).mul(tmp.g.sampleHalfLife).max(0))
+                if (player.g.radioactivity.sample_hp.lt(1)) ret += "<br>Finish sample and get a new one"
+
+                return ret
+            },
+            canAfford() {return player.g.radioactivity.sample_hp.lt(1)},
+            buy() {
+                player.g.radioactivity.points = player.g.radioactivity.points.add(1)
+                player.g.radioactivity.sample_hp = tmp.g.buyables[11].cost
+            },
+
+        }
+    },
+    tabFormat: {
+        "Main": {
+            content: [
+                "main-display",
+                ["prestige-button","",true],
+                "blank",
+                ["display-text", function(){return "You have " + format(tmp[this.layer].baseAmount) + " " + tmp[this.layer].baseResource}],
+                "blank",
+                ["upgrades", [1]]
+            ],
+            unlocked: true
+        },
+        "Milestones": {
+            content: [
+                "main-display",
+                ["prestige-button","",true],
+                "blank",
+                ["display-text", function(){return "You have " + format(tmp[this.layer].baseAmount) + " " + tmp[this.layer].baseResource}],
+                "blank",
+                "milestones"
+            ],
+            unlocked: true
+        },
+        "Radioactivity": {
+            content: [
+                "main-display",
+                ["prestige-button","",true],
+                "blank",
+                ["display-text", function(){return "You have " + format(tmp[this.layer].baseAmount) + " " + tmp[this.layer].baseResource}],
+                "blank",
+                ["microtabs","radioactivity"]
+            ],
+            unlocked() { return hasUpgrade("g", 11)}
+        },
+    },
+    microtabs: {
+        radioactivity: {
+            Decay: {
+                content: [
+                    ["display-text", function() {
+                        let ret = ""
+                        ret += "You have " + format(player.g.radioactivity.points) + " decay points which is boosting point gain by ^" + format(tmp.g.effect.decayeff, 5)
+                        ret += "<br>The current half-life of the sample is " + formatTime(tmp.g.sampleHalfLife)
+                        ret += hasUpgrade("g", 21) ? "<br><br>Due to alpha decay your alpha points are reducing half life by /" + format(upgradeEffect("g", 21), 4) : ""
+                        return ret
+                    }],
+                    ["buyables", [1]],
+                    "blank",
+                    ["upgrades", [2]]
+                ]
+            },
+            Info: {
+                content: [
+                    ["display-text", function() {
+                        let ret = ""
+                        ret += "Decay samples to gain Decay points"
+                        ret += "<br>Base Decay point gain is 1 per sample"
+                        return ret
+                    }]
+                ]
+            }
+        }
+    },
+    hotkeys: [
+        {key: "g", description: "G: Reset for gamma points", onPress() {if (canReset(this.layer)) doReset(this.layer)}},
+    ]
+})

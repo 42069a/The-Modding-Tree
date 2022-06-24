@@ -1,5 +1,5 @@
 let modInfo = {
-	name: "The Tree of something",
+	name: "The Tree of greek letters",
 	id: "42069",
 	author: "42069",
 	pointsName: "points",
@@ -13,13 +13,13 @@ let modInfo = {
 
 // Set your version in num and name
 let VERSION = {
-	num: "0.0.4",
-	name: "beta challenges",
+	num: "0.0.5",
+	name: "alpha decay",
 }
 
 let changelog = `
 <h1>Changelog:</h1><br>
-	<h2>Endgame: 1e13 total beta points</h2><br>
+	<h2>Endgame: 10 decay points</h2><br>
 	<h3>v0.0.1</h3><br>
 		- Added alpha layer.<br>
 		- Added 5 upgrades.<br>
@@ -35,6 +35,10 @@ let changelog = `
 		- Added 3 milestones.<br>
 		- Added 12 upgrades.<br>
 		- Added 3 challenges.<br>
+	<h3>v0.0.5</h3><br>
+		- Added gamma layer.<br>
+		- Added radioactivity.<br>
+		- Added 2 upgrades.<br>
 `
 
 let winText = `Congratulations! You have reached the end and beaten this game, but for now...`
@@ -61,12 +65,15 @@ function getPointGen() {
 	if (hasUpgrade("a", 11)) gain = gain.mul(upgradeEffect("a", 11))
 	gain = gain.mul(buyableEffect("a", 11))
 	if (player.b.unlocked) gain = gain.mul(tmp.b.effect.pointeff)
+	if (player.g.unlocked) gain = gain.mul(tmp.g.effect.pointeff)
+	
+	gain = gain.pow(tmp.g.effect.decayeff)
 	if (inChallenge("b", 11)) gain = gain.pow(0.5)
 	if (inChallenge("b", 12)) gain = gain.pow(0.5)
 	if (inChallenge("b", 13)) gain = gain.pow(0.5)
+
 	return gain
 }
-
 // You can add non-layer related variables that should to into "player" and be saved here, along with default values
 function addedPlayerData() { return {
 }}
@@ -77,7 +84,7 @@ var displayThings = [
 
 // Determines when the game "ends"
 function isEndgame() {
-	return player.b.total.gte(new Decimal("1e13"))
+	return player.g.radioactivity.points.gte(10)
 }
 
 

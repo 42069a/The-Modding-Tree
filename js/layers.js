@@ -16,6 +16,24 @@ addLayer("a", {
     type: "normal", // normal: cost to gain currency depends on amount gained. static: cost depends on how much you already have
     exponent: 0.5, // Prestige currency exponent
     resetTime: 0,
+    effect() {
+        let pointeff = player.a.best.div(2).add(1).pow(0.25)
+        
+        let poeffexp = new Decimal(2)
+        
+        pointeff = pointeff.pow(poeffexp)
+        pointeff = pointeff.gte(3) ? pointeff.mul(3).add(1).log(10).mul(3) : pointeff
+        pointeff = pointeff.gte(100) ? pointeff.mul(0.99).add(1).log(10).mul(50) : pointeff
+        return {
+            pointeff: pointeff,
+        }
+    },
+    effectDescription() {
+        ret = ""
+        ret += "which are multiplying point gain by " + format(tmp.a.effect.pointeff)
+        ret += "."
+        return ret
+    },
     gainMult() { // Calculate the multiplier for main currency from bonuses
         // base
         let mult = new Decimal(1)
@@ -47,7 +65,7 @@ addLayer("a", {
         let ret = base
         ret = ret.pow(tmp[this.layer].gainExp)
         ret = ret.mul(tmp[this.layer].gainMult)
-        return ret
+        return ret.floor()
     },
     automate(delta) {
         // auto buyables
@@ -125,7 +143,7 @@ addLayer("a", {
         },
         14: {
             title: "Alpha-14",
-            cost: new Decimal("1e29"),
+            cost: new Decimal("1e28"),
             description: "Boost Alpha-12 hardcap based on alpha points",
             effect() {
                 let ret = new Decimal(1)
@@ -183,7 +201,7 @@ addLayer("a", {
         },
         24: {
             title: "Alpha-24",
-            cost: new Decimal("5e33"),
+            cost: new Decimal("5e32"),
             description: "Boost Alpha-23 based on alpha points",
             effect() {
                 let ret = new Decimal(1)
@@ -388,6 +406,10 @@ addLayer("b", {
     gainMult() { // Calculate the multiplier for main currency from bonuses
         let mult = new Decimal(1)
 
+        // beta layer
+        if (hasUpgrade("b", 12)) mult = mult.mul(1.3)
+        if (hasMilestone("b", 2)) mult = mult.mul(1.2)
+
         // gamma layer
         if (player.g.unlocked) mult = mult.mul(tmp.g.effect.othereff)
 
@@ -402,7 +424,7 @@ addLayer("b", {
         let ret = base
         ret = ret.pow(tmp[this.layer].gainExp)
         ret = ret.mul(tmp[this.layer].gainMult)
-        return ret
+        return ret.floor()
     },
     row: 1, // Row the layer is in on the tree (0 is the first row)
     branches: ["a"],
@@ -485,7 +507,7 @@ addLayer("b", {
         },
         2: {
             requirementDescription: "25 total beta points",
-            effectDescription: "Gain 1% of alpha point gain per second per beta milestone",
+            effectDescription: "Gain 1% of alpha point gain per second per beta milestone and gain x1.2 beta points",
             done() { return player.b.total.gte(25) }
         },       
         3: {
@@ -499,9 +521,9 @@ addLayer("b", {
             done() { return player.b.total.gte(1000) }
         },
         5: {
-            requirementDescription: "1e13 total beta points",
+            requirementDescription: "1e12 total beta points",
             effectDescription: "Gives Alpha-14 and Alpha-24 on reset<br> and boost beta milestone 3 effect by x2.778",
-            done() { return player.b.total.gte(new Decimal("1e13")) }
+            done() { return player.b.total.gte(new Decimal("1e12")) }
         },
     },    
     upgrades: {
@@ -514,7 +536,7 @@ addLayer("b", {
         12: {
             title: "Beta-12",
             cost: new Decimal(10),
-            description: "Unlock another alpha buyable",
+            description: "Unlock another alpha buyable and boost beta point gain by x1.3",
             unlocked() {return player.b.total.gte(5) && hasUpgrade("b", 11) || hasUpgrade(this.layer, this.id)},
         },
         13: {
@@ -592,19 +614,19 @@ addLayer("b", {
         },
         41: {
             title: "Beta-41",
-            cost: new Decimal(10000),
+            cost: new Decimal(250000),
             description: "Unlock a challenge",
             unlocked() {return hasUpgrade("b", 33) && player.b.total.gt(7500) || hasUpgrade(this.layer, this.id)}
         },
         42: {
             title: "Beta-42",
-            cost: new Decimal(100000),
+            cost: new Decimal(1000000),
             description: "Unlock another challenge",
             unlocked() {return maxedChallenge("b", 11) || hasUpgrade(this.layer, this.id)}
         },
         43: {
             title: "Beta-43",
-            cost: new Decimal(1000000),
+            cost: new Decimal(2500000),
             description: "Unlock another challenge",
             unlocked() {return maxedChallenge("b", 12) || hasUpgrade(this.layer, this.id)}
         },
@@ -613,17 +635,17 @@ addLayer("b", {
         11: {
             name: "Beta-ch11",
             challengeDescription: "Point gain is raised to 0.5",
-            goalDescription: "1e9 points",
+            goalDescription: "1e10 points",
             rewardDescription: "-0.01 to Alpha-b11's quadratic scaling base",
-            canComplete() {return player.points.gte(new Decimal("1e9"))},
+            canComplete() {return player.points.gte(new Decimal("1e10"))},
             unlocked() {return hasUpgrade("b", 41)}
         },
         12: {
             name: "Beta-ch12",
             challengeDescription: "Beta-ch11 but Alpha-12 is hardcapped at 1",
-            goalDescription: "2e6 points",
+            goalDescription: "1e7 points",
             rewardDescription: "+2 to Alpha-12's hardcap",
-            canComplete() {return player.points.gte(new Decimal("2e6"))},
+            canComplete() {return player.points.gte(new Decimal("1e7"))},
             unlocked() {return hasUpgrade("b", 42)}
         },
         13: {
@@ -686,7 +708,7 @@ addLayer("g", {
         },
     }},
     color: "#FF3F3F",
-    requires: new Decimal("1e13"), // Can be a function that takes requirement increases into account
+    requires: new Decimal("1e12"), // Can be a function that takes requirement increases into account
     resource: "gamma points", // Name of prestige currency
     baseResource: "beta points", // Name of resource prestige is based on
     baseAmount() {return player.b.points}, // Get the current amount of baseResource
@@ -708,7 +730,7 @@ addLayer("g", {
         let ret = base
         ret = ret.pow(tmp[this.layer].gainExp)
         ret = ret.mul(tmp[this.layer].gainMult)
-        return ret
+        return ret.floor()
     },
     row: 2, // Row the layer is in on the tree (0 is the first row)
     layerShown() {return hasUpgrade("a", 34) || player[this.layer].unlocked},
@@ -789,12 +811,13 @@ addLayer("g", {
         return ret
     },
     sampleHalfLife(){
-        let ret = new Decimal(10)
+        let ret = new Decimal(2)
         if (hasUpgrade("g", 21)) ret = ret.div(upgradeEffect("g", 21))
         return ret
     },
     decayGainMult(){
         let ret = new Decimal(1)
+        if (hasUpgrade("g", 22)) ret = ret.mul(new Decimal(3).pow(upgradeEffect("g", 22)))
         return ret
     },
     milestones: {
@@ -844,16 +867,74 @@ addLayer("g", {
                 let ret = new Decimal(1)
                 
                 ret = ret.mul(player.a.points.div(new Decimal("1e40")).add(1).log(10).div(10).pow(0.5).add(1))
+                if (hasUpgrade("g", 31)) ret = ret.pow(upgradeEffect("g", 31))
                 if (ret.gt(5)) ret = ret.pow(0.5).mul(10).sub(5)
 
                 return ret
             },
-            unlocked() {return player.g.radioactivity.points.gte(1)}
-        }
+            isSoftcapped() {
+                let ret = new Decimal(5)
+                return upgradeEffect("g", 21).gt(ret)
+            },
+            unlocked() {return player.g.radioactivity.points.gte(1) || hasUpgrade(this.layer, this.id)}
+        },
+        22: {
+            title: "Decay-12",
+            price: new Decimal(10),
+            currencyDisplayName: "Decay points",
+            canAfford() { return player.g.radioactivity.points.gt(this.price)},
+            pay() {
+                player.g.radioactivity.points = player.g.radioactivity.points.sub(this.price)
+            },
+            description: "Square the sample's size but gain x3 more decay points",
+            fullDisplay() { return "<span><span><h3>" + this.title + "</h3><br></span><span>" + this.description + "</span><br><br>Cost: " + this.price + " " + this.currencyDisplayName + "</span>" },
+            effect() {
+                ret = new Decimal(1)
+                if (hasUpgrade("g", 23)) ret = ret.add(1)
+                return ret
+            },
+            unlocked() {return player.g.radioactivity.points.gte(5) || hasUpgrade(this.layer, this.id)}
+        },
+        23: {
+            title: "Decay-13",
+            price: new Decimal(15),
+            currencyDisplayName: "Decay points",
+            canAfford() { return player.g.radioactivity.points.gt(this.price)},
+            pay() {
+                player.g.radioactivity.points = player.g.radioactivity.points.sub(this.price)
+            },
+            description: "Apply Decay-12 again",
+            fullDisplay() { return "<span><span><h3>" + this.title + "</h3><br></span><span>" + this.description + "</span><br><br>Cost: " + this.price + " " + this.currencyDisplayName + "</span>" },
+            unlocked() {return hasUpgrade("g", 22) || hasUpgrade(this.layer, this.id)}
+        },
+        31: {
+            title: "Decay-21",
+            price: new Decimal(20),
+            currencyDisplayName: "Decay points",
+            canAfford() { return player.g.radioactivity.points.gt(this.price)},
+            pay() {
+                player.g.radioactivity.points = player.g.radioactivity.points.sub(this.price)
+            },
+            description: "Boost alpha decay baseed on decay points",
+            effect() {
+                let ret = new Decimal(1)
+                ret = ret.add(player.g.radioactivity.points.add(1).log(10).div(2))
+                return ret
+            },
+            effectDisplay() {
+                return "^" + format(this.effect(), 4)
+            },
+            fullDisplay() { return "<span><span><h3>" + this.title + "</h3><br></span><span>" + this.description + "</span><br>Currently: " + this.effectDisplay() + "<br><br>Cost: " + this.price + " " + this.currencyDisplayName + "</span>" },
+            unlocked() {return hasUpgrade("g", 22) || hasUpgrade(this.layer, this.id)}
+        },
     },
     buyables: {
         11: {
-            cost(x) {return new Decimal(4)},
+            cost(x) {
+                let ret = new Decimal(4)
+                if (hasUpgrade("g", 22))ret = ret.pow(new Decimal(2).pow(upgradeEffect("g", 22)))
+                return ret
+            },
             title() {return "Sample"},
             display() {
                 let ret = ""
@@ -866,7 +947,7 @@ addLayer("g", {
             },
             canAfford() {return player.g.radioactivity.sample_hp.lt(1)},
             buy() {
-                player.g.radioactivity.points = player.g.radioactivity.points.add(1)
+                player.g.radioactivity.points = player.g.radioactivity.points.add(tmp.g.decayGainMult)
                 player.g.radioactivity.sample_hp = tmp.g.buyables[11].cost
             },
 
@@ -915,12 +996,12 @@ addLayer("g", {
                         let ret = ""
                         ret += "You have " + format(player.g.radioactivity.points) + " decay points which is boosting point gain by ^" + format(tmp.g.effect.decayeff, 5)
                         ret += "<br>The current half-life of the sample is " + formatTime(tmp.g.sampleHalfLife)
-                        ret += hasUpgrade("g", 21) ? "<br><br>Due to alpha decay your alpha points are reducing half life by /" + format(upgradeEffect("g", 21), 4) : ""
+                        ret += hasUpgrade("g", 21) ? "<br><br>Due to alpha decay your alpha points are reducing half life by /" + format(upgradeEffect("g", 21), 4) : "" + tmp.g.upgrades[21].isSoftcapped ? " (softcapped)" : ""
                         return ret
                     }],
                     ["buyables", [1]],
                     "blank",
-                    ["upgrades", [2]]
+                    ["upgrades", [2, 3]]
                 ]
             },
             Info: {

@@ -13,13 +13,13 @@ let modInfo = {
 
 // Set your version in num and name
 let VERSION = {
-	num: "0.0.5",
-	name: "alpha decay",
+	num: "0.0.5.1",
+	name: "speed up",
 }
 
 let changelog = `
 <h1>Changelog:</h1><br>
-	<h2>Endgame: 10 decay points</h2><br>
+	<h2>Endgame: 4 decay upgrades</h2><br>
 	<h3>v0.0.1</h3><br>
 		- Added alpha layer.<br>
 		- Added 5 upgrades.<br>
@@ -38,6 +38,9 @@ let changelog = `
 	<h3>v0.0.5</h3><br>
 		- Added gamma layer.<br>
 		- Added radioactivity.<br>
+		- Added 2 upgrades.<br>
+	<h3>v0.0.5.1</h3><br>
+		- Did some rebalancing.<br>
 		- Added 2 upgrades.<br>
 `
 
@@ -64,6 +67,7 @@ function getPointGen() {
 	let gain = new Decimal(1)
 	if (hasUpgrade("a", 11)) gain = gain.mul(upgradeEffect("a", 11))
 	gain = gain.mul(buyableEffect("a", 11))
+	if (player.a.unlocked) gain = gain.mul(tmp.a.effect.pointeff)
 	if (player.b.unlocked) gain = gain.mul(tmp.b.effect.pointeff)
 	if (player.g.unlocked) gain = gain.mul(tmp.g.effect.pointeff)
 	
@@ -84,7 +88,7 @@ var displayThings = [
 
 // Determines when the game "ends"
 function isEndgame() {
-	return player.g.radioactivity.points.gte(10)
+	return hasUpgrade("g", 31)
 }
 
 
